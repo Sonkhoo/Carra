@@ -1,0 +1,73 @@
+# ==========================================================
+# Secrets & environment
+# ==========================================================
+.env
+.env.*
+!.env.example
+!.env.*.example
+secrets/*
+!secrets/.gitkeep
+*.pem
+*.key
+*.crt
+*.p12
+
+# ==========================================================
+# Python
+# ==========================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Tooling caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.ipynb_checkpoints/
+
+# ==========================================================
+# Models & generated data (large, re-downloadable)
+# ==========================================================
+models/
+*.onnx
+*.onnx.json
+*.wav
+hf-cache/
+
+# ==========================================================
+# Logs
+# ==========================================================
+*.log
+logs/
+
+# ==========================================================
+# Node (frontend tooling, if added)
+# ==========================================================
+node_modules/
+npm-debug.log*
+
+# ==========================================================
+# Editors & OS
+# ==========================================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
