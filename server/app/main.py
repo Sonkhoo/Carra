@@ -9,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config.config import get_settings
 from app.config.logging_setup import configure_logging, get_logger
+from app.agents.llm import LLMService
+from app.schemas.llm import ChatMessage
 from app.voice.stt import WhisperService
 from app.voice.tts import PiperService
 
@@ -17,23 +19,29 @@ log = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app.state.llm_service = None
     try:
-        # ---- STARTUP: runs once, before the first request ----
         start = time.perf_counter()
         app.state.tts_service = PiperService()
         app.state.stt_service = WhisperService()
-        log.info("models loaded in %.1f s", time.perf_counter() - start)
+        app.state.llm_service = LLMService()
 
-        # Warm-up: one throwaway call each, so the first caller doesn't pay
-        # the one-time setup cost (3 s+ for Piper on the first call).
-        start = time.perf_counter()
+        # Warm up so the first caller doesn't pay one-time setup costs.
         await app.state.tts_service.synthesize("Hello.")
-        await app.state.stt_service.transcribe(np.zeros(16000, dtype=np.float32))  # 1 s of silence at 16 kHz
-        log.info("warm-up done in %.1f s", time.perf_counter() - start)
+        await app.state.stt_service.transcribe(np.zeros(16000, dtype=np.float32))
+        try:
+            # First request makes Ollama load the model into VRAM (several seconds).
+            await app.state.llm_service.chat([ChatMessage(role="user", content="Hi")])
+        except Exception:
+            # Don't block startup: STT/TTS still work, and Ollama may come up later.
+            log.warning("llm warm-up failed; is Ollama running? continuing without it")
+        log.info("startup done in %.1f s", time.perf_counter() - start)
 
-        yield  
+        yield
     finally:
         log.info("shutting down")
+        if app.state.llm_service:
+            await app.state.llm_service.close()
 
 
 app = FastAPI(

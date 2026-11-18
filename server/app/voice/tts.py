@@ -4,26 +4,18 @@ import re
 import time
 import unicodedata
 import wave
-from dataclasses import dataclass
 
 from piper import PiperVoice
 
 from app.config.config import get_settings
 from app.config.logging_setup import get_logger
+from app.schemas.tts import Speech
 
 settings = get_settings()
 log = get_logger(__name__)
 
 MAX_CHARS = 500  # ~30 s of speech; a runaway LLM reply shouldn't block TTS for a minute
 FALLBACK_TEXT = "Sorry, could you say that again?"
-
-
-@dataclass
-class Speech:
-    wav: bytes  # a complete .wav file, header included
-    sample_rate: int
-    audio_s: float  # length of the audio
-    duration_ms: int  # how long synthesis took
 
 
 class PiperService:

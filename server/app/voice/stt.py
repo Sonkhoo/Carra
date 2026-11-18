@@ -1,34 +1,19 @@
 import asyncio
 import time
-from dataclasses import dataclass
 
 import numpy as np
 from faster_whisper import WhisperModel
 
 from app.config.config import get_settings
 from app.config.logging_setup import get_logger
+from app.schemas.stt import EMPTY_TRANSCRIPT, Transcript
 
 settings = get_settings()
 log = get_logger(__name__)
 
-SAMPLE_RATE = 16_000  
+SAMPLE_RATE = 16_000
 MIN_SAMPLES = SAMPLE_RATE // 4  # 0.25 s
 MAX_SAMPLES = SAMPLE_RATE * 30  # 30 s
-
-
-@dataclass
-class Transcript:
-    text: str
-    no_speech_prob: float  # 0..1, high = probably noise, not speech
-    audio_s: float  # length of the clip
-    duration_ms: int  # how long transcription took
-
-    @property
-    def is_speech(self) -> bool:
-        return bool(self.text) and self.no_speech_prob < settings.stt_no_speech_threshold
-
-
-EMPTY = Transcript(text="", no_speech_prob=1.0, audio_s=0.0, duration_ms=0)
 
 
 class WhisperService:
@@ -63,6 +48,7 @@ class WhisperService:
         return Transcript(
             text=text,
             no_speech_prob=no_speech,
+            is_speech=bool(text) and no_speech < settings.stt_no_speech_threshold,
             audio_s=len(audio) / SAMPLE_RATE,
             duration_ms=int((time.perf_counter() - start) * 1000),
         )
@@ -72,7 +58,7 @@ class WhisperService:
         audio = sanitize_audio(audio)
         if audio.size < MIN_SAMPLES:
             log.info("stt skipped: clip too short (%.2f s)", audio.size / SAMPLE_RATE)
-            return EMPTY
+            return EMPTY_TRANSCRIPT
 
         async with self._lock:
             try:
